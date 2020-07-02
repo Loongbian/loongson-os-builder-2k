@@ -10,7 +10,7 @@ BUILD_DIR=build
 ROOTFS_DIR="$BUILD_DIR/rootfs"
 OVERLAY_UPPER_DIR="$BUILD_DIR/overlay-upper"
 OVERLAY_WORK_DIR="$BUILD_DIR/overlay-work"
-POST_DEBOOTSTRAP_SETUP_DIR=setup
+POST_DEBOOTSTRAP_SETUP_DIR=post-debootstrap-setup
 INSTALLER_DIR=installer
 TARGET_MEDIA_DIR=target-media
 
@@ -114,20 +114,27 @@ create_zipped_installation_file() {
 
 clean_all() {
   set +e
+  rm -f *.zip
+
+  if [ ! -d "$ROOTFS_DIR" ]; then
+    return 0
+  fi
+
   # extra check 
-  if ! which findmnt; then
+  if ! which findmnt > /dev/null; then
     echo "Error: Could not find findmnt command."
     return 1
   fi
-  if ! which fgrep; then
+  if ! which fgrep > /dev/null; then
     echo "Error: Could not find fgrep command."
     return 1
   fi
-  if ! which realpath; then
+  if ! which realpath > /dev/null; then
     echo "Error: Could not find realpath command."
     return 1
   fi
-  if findmnt -lo TARGET | fgrep "$(realpath $ROOTFS_DIR)"; then
+  
+  if findmnt -lo TARGET | fgrep "$(realpath $ROOTFS_DIR)" > /dev/null; then
     echo "Error: Something is mounted in the target rootfs directory, not cleaning."
     return 1
   fi
@@ -169,7 +176,7 @@ clean-all)
     "Available commands:\n" \
     "debootstrap -- debootstrap the base rootfs using qemu-debootstrap\n" \
     "post-debootstrap-setup -- install essential packages, desktop environment, external packages in setup/pkgs, and configure DHCP network for wired network interfaces\n" \
-    "build-installer -- build the installer initrd image\n" \
+    "build-installer-initrd -- build the installer initrd image\n" \
     "pack-rootfs -- pack the rootfs into a squashfs image and generate its md5sum\n" \
     "create-zipped-installation-file -- create the ready-to-use installation zip file\n" \
     "all -- everything above\n" \
