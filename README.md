@@ -39,7 +39,7 @@ Now you can see a ready-to-boot installation zip file. You may wish to distribut
 * `pack-rootfs`: pack the rootfs into a squashfs image and generate its md5sum required by installer.img
 * `create-zipped-installation-file`: create the ready-to-boot installation zip file
 * `all`: everything above
-* `clean-all` -- clean all built files
+* `clean-all`: clean all built files
 
 ## Create the bootable installation media
 
