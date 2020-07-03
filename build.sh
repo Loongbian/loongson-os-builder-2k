@@ -49,6 +49,7 @@ run_post_debootstrap_setup() {
   trap run_post_debootstrap_setup_cleanup EXIT
   require_bootstrapped
   resolv_workaround
+  export "TARGET_HOSTNAME"
   mkdir -p "$ROOTFS_DIR/tmp/$POST_DEBOOTSTRAP_SETUP_DIR"
   mount --bind "$POST_DEBOOTSTRAP_SETUP_DIR" "$ROOTFS_DIR/tmp/$POST_DEBOOTSTRAP_SETUP_DIR"
   chroot "$ROOTFS_DIR" "/tmp/$POST_DEBOOTSTRAP_SETUP_DIR/setup.sh"
