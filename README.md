@@ -43,7 +43,7 @@ Now you can see a ready-to-boot installation zip file. You may wish to distribut
 * `all`: everything above
 * `clean-all`: clean all built files
 
-## Create the bootable installation media
+## Create a bootable installation media
 
 ```
 $ unzip debian_buster_mips64el_ls2k_20200703.zip    # replace the filename with the actual one you have
