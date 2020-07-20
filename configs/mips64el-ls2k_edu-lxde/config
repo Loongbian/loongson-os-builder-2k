@@ -1,0 +1,5 @@
+CONFIG_ARCH=mips64el
+CONFIG_SUITE=experimental
+CONFIG_APT_SOURCE=https://mirrors.teach.com.cn/debian
+CONFIG_HOSTNAME=ls2k
+CONFIG_INSTALLER_KERNEL_VERSION=5.7.0-loongson-2k

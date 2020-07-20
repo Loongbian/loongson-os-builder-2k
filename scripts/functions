@@ -1,0 +1,18 @@
+setup_dhcp_network() {
+  # update hostname to avoid conflict with the build machine
+  if [ ! "$TARGET_HOSTNAME" = "" ]; then
+    echo "$TARGET_HOSTNAME" > /etc/hostname
+  fi
+
+  systemctl enable systemd-networkd
+  systemctl enable systemd-resolved
+  ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+  cat << EOF > /etc/systemd/network/dhcp.network
+[Match]
+Name=en*
+
+[Network]
+DHCP=yes
+EOF
+}
+

@@ -1,58 +1,65 @@
 #!/bin/bash
 
-ARCH=mips64el
-SUITE=buster
-MIRROR_URL=http://mirrors.163.com/debian
-TARGET_HOSTNAME=ls2k
-
-
 BUILD_DIR=build
 ROOTFS_DIR="$BUILD_DIR/rootfs"
+CONFIG_DIR=configs
 OVERLAY_UPPER_DIR="$BUILD_DIR/overlay-upper"
 OVERLAY_WORK_DIR="$BUILD_DIR/overlay-work"
-POST_DEBOOTSTRAP_SETUP_DIR=post-debootstrap-setup
+HOOK_FUNCTIONS=scripts/functions
 INSTALLER_DIR=installer
-TARGET_MEDIA_DIR=target-media
+
+
+export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true
+export LC_ALL=C LANGUAGE=C LANG=C
 
 cd "$(dirname $0)"
 
+set -e
+
 resolv_workaround() {
-  set -e
   mkdir -p "$ROOTFS_DIR/run/systemd/resolve"
   cat "/etc/resolv.conf" > "$ROOTFS_DIR/run/systemd/resolve/stub-resolv.conf"
 }
 
 require_bootstrapped() {
-  set +e
   if [ ! -d "$ROOTFS_DIR" ]; then
     echo "Error: Could not find target rootfs directory. Have you bootstrapped?"
-    set -e
     return 1
   fi
-  set -e
   return 0
 }
 
 run_debootstrap() {
-  set -e
   mkdir -p "$ROOTFS_DIR"
-  qemu-debootstrap --arch "$ARCH" "$SUITE" "$ROOTFS_DIR" "$MIRROR_URL"
+  if [ "$(uname -m)" = "$CONFIG_ARCH" ]; then
+    debootstrap "$CONFIG_SUITE" "$ROOTFS_DIR" "$CONFIG_APT_SOURCE"
+  else
+    qemu-debootstrap --arch "$CONFIG_ARCH" "$CONFIG_SUITE" "$ROOTFS_DIR" "$CONFIG_APT_SOURCE"
+  fi
 }
 
 run_post_debootstrap_setup_cleanup() {
   set +e
-  umount -q "$ROOTFS_DIR/tmp/$POST_DEBOOTSTRAP_SETUP_DIR"
+  umount -q "$ROOTFS_DIR/tmp/setup"
   set -e
 }
 
 run_post_debootstrap_setup() {
+  local POSTDEBOOTSTRAP_SETUP_DIR="$CONFIG_DIR/$CONFIG_NAME/setup"
+  echo "$POSTDEBOOTSTRAP_SETUP_DIR"
+  if [ ! -f "$POSTDEBOOTSTRAP_SETUP_DIR/setup.sh" ]; then
+    return
+  fi
+
   trap run_post_debootstrap_setup_cleanup EXIT
+
   require_bootstrapped
   resolv_workaround
-  export "TARGET_HOSTNAME"
-  mkdir -p "$ROOTFS_DIR/tmp/$POST_DEBOOTSTRAP_SETUP_DIR"
-  mount --bind "$POST_DEBOOTSTRAP_SETUP_DIR" "$ROOTFS_DIR/tmp/$POST_DEBOOTSTRAP_SETUP_DIR"
-  chroot "$ROOTFS_DIR" "/tmp/$POST_DEBOOTSTRAP_SETUP_DIR/setup.sh"
+  mkdir -p "$ROOTFS_DIR/tmp/setup"
+  mount --bind "$POSTDEBOOTSTRAP_SETUP_DIR" "$ROOTFS_DIR/tmp/setup"
+  cp "$HOOK_FUNCTIONS" "$ROOTFS_DIR/tmp/functions"
+  export CONFIG_HOSTNAME
+  HOOK_FUNCTIONS="/tmp/functions" chroot "$ROOTFS_DIR" "/tmp/setup/setup.sh"
   run_post_debootstrap_setup_cleanup
   trap - EXIT
 }
@@ -69,7 +76,6 @@ build_installer_initrd_cleanup() {
 
 build_installer_initrd() {
   trap build_installer_initrd_cleanup EXIT
-  set -e
   require_bootstrapped
   resolv_workaround
   mkdir -p "$OVERLAY_UPPER_DIR" "$OVERLAY_WORK_DIR"
@@ -77,11 +83,17 @@ build_installer_initrd() {
   mount -t proc proc "$ROOTFS_DIR/proc"
   mount -t sysfs sys "$ROOTFS_DIR/sys"
   chroot "$ROOTFS_DIR" apt update
-  chroot "$ROOTFS_DIR" apt install -y gcc whiptail parted squashfs-tools dosfstools
+  chroot "$ROOTFS_DIR" apt install -y --no-install-recommends gcc whiptail parted squashfs-tools dosfstools
   mkdir -p "$ROOTFS_DIR/tmp/$INSTALLER_DIR"
   mount --bind "$INSTALLER_DIR" "$ROOTFS_DIR/tmp/$INSTALLER_DIR"
-  export INSTALLER_MKINITRAMFS_KERNEL_VERSION="$(ls $ROOTFS_DIR/lib/modules | sort -V | tail -1)"
-  chroot "$ROOTFS_DIR" "/tmp/$INSTALLER_DIR/build.sh"
+
+  if [ "$CONFIG_INSTALLER_KERNEL_VERSION" != "" -a "$CONFIG_INSTALLER_KERNEL_VERSION" != "auto" ]; then
+    local INSTALLER_KERNEL_VERSION="$CONFIG_INSTALLER_KERNEL_VERSION"
+  else
+    local INSTALLER_KERNEL_VERSION="$(ls $ROOTFS_DIR/lib/modules | sort -V | tail -1)"
+  fi
+
+  chroot "$ROOTFS_DIR" "/tmp/$INSTALLER_DIR/build.sh" "$INSTALLER_KERNEL_VERSION"
   ln -sf "../$INSTALLER_DIR/installer.img" "$BUILD_DIR/"
   build_installer_initrd_cleanup
   trap - EXIT
@@ -99,29 +111,42 @@ pack_rootfs() {
   (cd "$BUILD_DIR" && md5sum "filesystem.sqfs" > "filesystem.md5sum")
 }
 
-create_zipped_installation_file() {
-  set +e
+check_target_media_symlinks() {
+  local TARGET_MEDIA_DIR="$1"
   for file in "$TARGET_MEDIA_DIR"/*; do
     if [ -h $file -a ! -e $file ]; then
       echo "Error: Broken symlink $file found. Have you run build-installer and pack-rootfs?"
       return 1
     fi
   done
-  set -e
-  FILENAME="debian_${SUITE}_${ARCH}_${TARGET_HOSTNAME}_$(date '+%Y%m%d').zip"
+  return 0
+}
+
+create_bootable_zip() {
+  local TARGET_MEDIA_DIR="$CONFIG_DIR/$CONFIG_NAME/target-media"
+  check_target_media_symlinks "$TARGET_MEDIA_DIR"
+  FILENAME="debian_${CONFIG_SUITE}_${CONFIG_ARCH}_${CONFIG_HOSTNAME}_$(date '+%Y%m%d').zip"
   zip -0 -r "$FILENAME" "$TARGET_MEDIA_DIR"
   echo "$FILENAME is ready."
 }
 
+create_bootable_iso() {
+  local TARGET_MEDIA_DIR="$CONFIG_DIR/$CONFIG_NAME/target-media"
+  check_target_media_symlinks "$TARGET_MEDIA_DIR" 
+  FILENAME="debian_${CONFIG_SUITE}_${CONFIG_ARCH}_${CONFIG_HOSTNAME}_$(date '+%Y%m%d').iso"
+  genisoimage -V "Debian Installer" -f -l -o "$FILENAME" "$TARGET_MEDIA_DIR"
+  echo "$FILENAME is ready."
+}
+
 clean_all() {
-  set +e
   rm -f *.zip
+  rm -f *.iso
 
   if [ ! -d "$ROOTFS_DIR" ]; then
     return 0
   fi
 
-  # extra check 
+  # extra check
   if ! which findmnt > /dev/null; then
     echo "Error: Could not find findmnt command."
     return 1
@@ -134,18 +159,66 @@ clean_all() {
     echo "Error: Could not find realpath command."
     return 1
   fi
-  
+
   if findmnt -lo TARGET | fgrep "$(realpath $ROOTFS_DIR)" > /dev/null; then
     echo "Error: Something is mounted in the target rootfs directory, not cleaning."
     return 1
   fi
   rm -rf --one-file-system "$BUILD_DIR"
-  set -e
+}
+
+usage() {
+  echo -e \
+    "Usage: $0 -c config -m command\n\n" \
+    "Available commands:\n" \
+    "debootstrap -- debootstrap the base rootfs using qemu-debootstrap\n" \
+    "post-debootstrap-setup -- install essential packages, desktop environment, external packages in setup/pkgs, and configure DHCP network for wired network interfaces\n" \
+    "build-installer-initrd -- build the installer initrd image\n" \
+    "pack-rootfs -- pack the rootfs into a squashfs image and generate its md5sum\n" \
+    "create-bootable-iso -- create the bootable installation iso file\n" \
+    "all -- everything above\n" \
+    "create-bootable-zip -- create the bootable installation zip file (legacy)\n" \
+    "clean-all -- clean all built files\n"
 }
 
 set -e
 
-case $1 in 
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+  -c|--config)
+    CONFIG_NAME="$2"
+    CONFIG_FILE="$CONFIG_DIR/$CONFIG_NAME/config"
+    shift 2 || (usage; exit 1)
+    ;;
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  -m|--mode)
+    MODE="$2"
+    shift 2 || (usage; exit 1)
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+  esac
+done
+
+if [ "$CONFIG_FILE" = "" ]; then
+  usage
+  exit 1
+fi
+
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "Error: could not find config file $CONFIG_FILE"
+  exit 1
+fi
+
+
+source "$CONFIG_FILE"
+
+case "$MODE" in 
 debootstrap)
   run_debootstrap
   ;;
@@ -158,29 +231,24 @@ build-installer-initrd)
 pack-rootfs)
   pack_rootfs
   ;;
-create-zipped-installation-file)
-  create_zipped_installation_file
+create-bootable-zip)
+  create_bootable_zip
   ;;
-all)
+create-bootable-iso)
+  create_bootable_iso
+  ;;
+all|"")
+  clean_all
   run_debootstrap
   run_post_debootstrap_setup
   build_installer_initrd
   pack_rootfs
-  create_zipped_installation_file
+  create_bootable_iso
   ;;
 clean-all)
   clean_all
   ;;
 *)
-  echo -e \
-    "Usage: $0 command\n\n" \
-    "Available commands:\n" \
-    "debootstrap -- debootstrap the base rootfs using qemu-debootstrap\n" \
-    "post-debootstrap-setup -- install essential packages, desktop environment, external packages in setup/pkgs, and configure DHCP network for wired network interfaces\n" \
-    "build-installer-initrd -- build the installer initrd image\n" \
-    "pack-rootfs -- pack the rootfs into a squashfs image and generate its md5sum\n" \
-    "create-zipped-installation-file -- create the ready-to-use installation zip file\n" \
-    "all -- everything above\n" \
-    "clean-all -- clean all built files\n"
+  usage
   exit 1
 esac
