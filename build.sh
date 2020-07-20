@@ -83,7 +83,7 @@ build_installer_initrd() {
   mount -t proc proc "$ROOTFS_DIR/proc"
   mount -t sysfs sys "$ROOTFS_DIR/sys"
   chroot "$ROOTFS_DIR" apt update
-  chroot "$ROOTFS_DIR" apt install -y --no-install-recommends gcc whiptail parted squashfs-tools dosfstools
+  chroot "$ROOTFS_DIR" apt install -y --no-install-recommends libc6-dev gcc whiptail parted squashfs-tools dosfstools
   mkdir -p "$ROOTFS_DIR/tmp/$INSTALLER_DIR"
   mount --bind "$INSTALLER_DIR" "$ROOTFS_DIR/tmp/$INSTALLER_DIR"
 
