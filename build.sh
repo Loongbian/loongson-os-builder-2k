@@ -31,11 +31,11 @@ require_bootstrapped() {
 
 run_debootstrap() {
   mkdir -p "$ROOTFS_DIR"
-  if [ "$(uname -m)" = "$CONFIG_ARCH" ]; then
+#  if [ "$(uname -m)" = "$CONFIG_ARCH" ]; then
     debootstrap "$CONFIG_SUITE" "$ROOTFS_DIR" "$CONFIG_APT_SOURCE"
-  else
-    qemu-debootstrap --arch "$CONFIG_ARCH" "$CONFIG_SUITE" "$ROOTFS_DIR" "$CONFIG_APT_SOURCE"
-  fi
+#  else
+#    qemu-debootstrap --arch "$CONFIG_ARCH" "$CONFIG_SUITE" "$ROOTFS_DIR" "$CONFIG_APT_SOURCE"
+#  fi
 }
 
 run_post_debootstrap_setup_cleanup() {
@@ -83,7 +83,7 @@ build_installer_initrd() {
   mount -t proc proc "$ROOTFS_DIR/proc"
   mount -t sysfs sys "$ROOTFS_DIR/sys"
   chroot "$ROOTFS_DIR" apt update
-  chroot "$ROOTFS_DIR" apt install -y --no-install-recommends libc6-dev gcc whiptail parted squashfs-tools dosfstools
+  chroot "$ROOTFS_DIR" apt install -y --no-install-recommends libc6-dev gcc whiptail parted squashfs-tools dosfstools busybox
   mkdir -p "$ROOTFS_DIR/tmp/$INSTALLER_DIR"
   mount --bind "$INSTALLER_DIR" "$ROOTFS_DIR/tmp/$INSTALLER_DIR"
 
@@ -139,6 +139,9 @@ create_bootable_iso() {
 }
 
 clean_all() {
+  echo "WARNING: All built files will be deleted! Press Ctrl+C now to abort. Sleeping for 5 secs..."
+  sleep 5
+
   rm -f *.zip
   rm -f *.iso
 

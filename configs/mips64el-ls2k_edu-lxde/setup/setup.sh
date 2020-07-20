@@ -19,11 +19,12 @@ update_apt_list() {
 }
 
 install_essential_pkgs() {
-  apt install -y --no-install-recommends initramfs-tools pmon-update linux-image-4.19.0-loongson-2k linux-image-5.7.0-loongson-2k ca-certificates
+  apt install -y --no-install-recommends initramfs-tools pmon-update ca-certificates
+  apt install -y --no-install-recommends linux-image-4.19.0-loongson-2k linux-image-5.7.0-loongson-2k
 }
 
 install_desktop() {
-  apt install -y --no-install-recommends xserver-xorg lxde lightdm
+  apt install -y --no-install-recommends xserver-xorg lxde lightdm desktop-base plymouth
 }
 
 run_workarounds() {

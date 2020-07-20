@@ -1,7 +1,7 @@
 setup_dhcp_network() {
   # update hostname to avoid conflict with the build machine
-  if [ ! "$TARGET_HOSTNAME" = "" ]; then
-    echo "$TARGET_HOSTNAME" > /etc/hostname
+  if [ ! "$CONFIG_HOSTNAME" = "" ]; then
+    echo "$CONFIG_HOSTNAME" > /etc/hostname
   fi
 
   systemctl enable systemd-networkd
