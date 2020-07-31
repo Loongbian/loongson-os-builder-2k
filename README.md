@@ -17,7 +17,8 @@ Note the `--recursive` option.
 As root, run
 
 ```
-$ apt install binfmt-support qemu qemu-user-static debootstrap
+$ apt install binfmt-support qemu qemu-user-static debootstrap 
+$ apt install whiptail parted squashfs-tools dosfstools gcc     # used for building the initrd installer  
 ```
 
 ## Build
@@ -26,7 +27,7 @@ $ apt install binfmt-support qemu qemu-user-static debootstrap
 
 ```
 $ cd loongson-os-builder-2k
-$ ./build.sh all
+$ ./build.sh -c mips64el-ls2k_edu-lxde
 ```
 
 Now you can see a ready-to-boot installation zip file. You may wish to distribute it.
@@ -39,14 +40,21 @@ Now you can see a ready-to-boot installation zip file. You may wish to distribut
 * `post-debootstrap-setup`: install essential packages, desktop environment, external packages in setup/pkgs, and configure DHCP network for wired network interfaces
 * `build-installer-initrd`: build the installer.img initrd image
 * `pack-rootfs`: pack the rootfs into a squashfs image and generate its md5sum required by installer.img
-* `create-zipped-installation-file`: create the ready-to-boot installation zip file
+* `create-bootable-iso`: create the bootable installation iso file
 * `all`: everything above
+* `create-bootable-zip`:  create the bootable installation zip file (legacy)
 * `clean-all`: clean all built files
+
+For example, use
+
+```
+$ ./build.sh -c mips64el-ls2k_edu-lxde -m debootstrap
+```
+
+to run debootstrap only.
 
 ## Create a bootable installation media
 
 ```
-$ unzip debian_buster_mips64el_ls2k_20200703.zip    # replace the filename with the actual one you have
-$ # make sure your USB drive has a DOS (also known as MBR) disk label and has a FAT-32 partition.
-$ cp target-media/* /media/usb                      # replace the destination with the mountpoint of your USB drive
+$ dd if=debian_buster_mips64el_ls2k_YYYYMMDD.iso of=/dev/sdX bs=1M status=progress
 ```
