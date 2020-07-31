@@ -30,7 +30,7 @@ $ cd loongson-os-builder-2k
 $ ./build.sh -c mips64el-ls2k_edu-lxde
 ```
 
-Now you can see a ready-to-boot installation zip file. You may wish to distribute it.
+Now you get a ready-to-boot installation iso file. You may wish to distribute it.
 
 ### Manually
 
