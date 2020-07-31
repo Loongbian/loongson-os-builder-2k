@@ -7,7 +7,7 @@ Tested on a Debian Buster x86_64 build machine.
 ## Get the builder
 
 ```
-git clone https://github.com/Loongbian/loongson-os-builder-2k.git --recursive
+git clone https://github.com/Loongbian/loongson-os-builder-2k.git --recursive --depth=1
 ```
 
 Note the `--recursive` option.
