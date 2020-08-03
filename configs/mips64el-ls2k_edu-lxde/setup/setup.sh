@@ -2,11 +2,6 @@
 
 set -e
 
-if ! ischroot -t; then
-  echo "Error: This script is only supposed to run in chroot."
-  exit 1
-fi
-
 source "$HOOK_FUNCTIONS"
 
 APT_FALLBACK_SOURCE="http://mirrors.163.com/debian"
@@ -15,16 +10,6 @@ update_apt_list() {
   if ! fgrep "$APT_FALLBACK_SOURCE" /etc/apt/sources.list; then
     echo "deb $APT_FALLBACK_SOURCE buster main" >> /etc/apt/sources.list
   fi
-  apt update
-}
-
-install_essential_pkgs() {
-  apt install -y --no-install-recommends initramfs-tools pmon-update ca-certificates
-  apt install -y --no-install-recommends linux-image-4.19.0-loongson-2k linux-image-5.7.0-loongson-2k
-}
-
-install_desktop() {
-  apt install -y --no-install-recommends xserver-xorg lxde lightdm desktop-base plymouth
 }
 
 run_workarounds() {
@@ -35,8 +20,6 @@ run_workarounds() {
   echo -e "[Resolve]\nDNSSEC=false\n" > "/etc/systemd/resolved.conf.d/disable-dnssec.conf"
 }
 
+basic_setup
 update_apt_list
-install_essential_pkgs
-install_desktop
-setup_dhcp_network
 run_workarounds

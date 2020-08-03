@@ -1,9 +1,18 @@
-setup_dhcp_network() {
+if ! ischroot -t; then
+  echo "Error: This script is only supposed to run in chroot."
+  exit 1
+fi
+
+
+update_hostname() {
   # update hostname to avoid conflict with the build machine
   if [ ! "$CONFIG_HOSTNAME" = "" ]; then
     echo "$CONFIG_HOSTNAME" > /etc/hostname
   fi
+}
 
+setup_dhcp_network() {
+  # setup DHCP network using systemd-networkd
   systemctl enable systemd-networkd
   systemctl enable systemd-resolved
   ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
@@ -16,3 +25,13 @@ DHCP=yes
 EOF
 }
 
+remove_machine_id() {
+  # remove /etc/machine-id and let the installer regenerate it
+  rm -f /etc/machine-id
+}
+
+basic_setup() {
+  update_hostname
+  setup_dhcp_network
+  remove_machine_id
+}

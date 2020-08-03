@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 BUILD_DIR=build
 ROOTFS_DIR="$BUILD_DIR/rootfs"
 CONFIG_DIR=configs
@@ -8,13 +10,10 @@ OVERLAY_WORK_DIR="$BUILD_DIR/overlay-work"
 HOOK_FUNCTIONS=scripts/functions
 INSTALLER_DIR=installer
 
-
 export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true
 export LC_ALL=C LANGUAGE=C LANG=C
 
 cd "$(dirname $0)"
-
-set -e
 
 resolv_workaround() {
   mkdir -p "$ROOTFS_DIR/run/systemd/resolve"
@@ -31,17 +30,14 @@ require_bootstrapped() {
 
 run_debootstrap() {
   mkdir -p "$ROOTFS_DIR"
-#  if [ "$(uname -m)" = "$CONFIG_ARCH" ]; then
-    debootstrap "$CONFIG_SUITE" "$ROOTFS_DIR" "$CONFIG_APT_SOURCE"
-#  else
-#    qemu-debootstrap --arch "$CONFIG_ARCH" "$CONFIG_SUITE" "$ROOTFS_DIR" "$CONFIG_APT_SOURCE"
-#  fi
+  qemu-debootstrap --arch "$CONFIG_ARCH" \
+    ${CONFIG_KEYRING:+"--keyring" "$CONFIG_KEYRING"} \
+    ${CONFIG_EXT_PKGS:+"--include" "$CONFIG_EXT_PKGS"} \
+    "$CONFIG_SUITE" "$ROOTFS_DIR" "$CONFIG_MIRROR"
 }
 
 run_post_debootstrap_setup_cleanup() {
-  set +e
-  umount -q "$ROOTFS_DIR/tmp/setup"
-  set -e
+  umount -q "$ROOTFS_DIR/tmp/setup" || true
 }
 
 run_post_debootstrap_setup() {
@@ -66,12 +62,10 @@ run_post_debootstrap_setup() {
 
 build_installer_initrd_cleanup() {
   echo "Cleaning up..."
-  set +e
-  umount -q "$ROOTFS_DIR/proc" 
-  umount -q "$ROOTFS_DIR/sys"
-  umount -q "$ROOTFS_DIR/tmp/$INSTALLER_DIR"
-  umount -q "$ROOTFS_DIR"
-  set -e
+  umount -q "$ROOTFS_DIR/proc" || true
+  umount -q "$ROOTFS_DIR/sys" || true
+  umount -q "$ROOTFS_DIR/tmp/$INSTALLER_DIR" || true
+  umount -q "$ROOTFS_DIR" || true
 }
 
 build_installer_initrd() {
@@ -100,7 +94,6 @@ build_installer_initrd() {
 }
 
 pack_rootfs() {
-  set -e
   require_bootstrapped
   EXCLUDE_LIST="/var/log /var/tmp /var/cache /var/run /var/mail /run /var/run /tmp /root /home /dev /sys /proc /mnt /media"
   EXCLUDE_ARGS=
@@ -139,8 +132,10 @@ create_bootable_iso() {
 }
 
 clean_all() {
-  echo "WARNING: All built files will be deleted! Press Ctrl+C now to abort. Sleeping for 5 secs..."
-  sleep 5
+  if [ "$NO_CLEAN_WARNING" != "y" ]; then
+    echo "WARNING: All built files will be deleted! Press Ctrl+C now to abort. Sleeping for 5 secs..."
+    sleep 5
+  fi
 
   rm -f *.zip
   rm -f *.iso
@@ -184,7 +179,6 @@ usage() {
     "clean-all -- clean all built files\n"
 }
 
-set -e
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -200,6 +194,10 @@ while [ "$#" -gt 0 ]; do
   -m|--mode)
     MODE="$2"
     shift 2 || (usage; exit 1)
+    ;;
+  -y|--no-clean-warning)
+    NO_CLEAN_WARNING=y
+    shift
     ;;
   *)
     usage
