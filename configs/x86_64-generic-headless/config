@@ -1,6 +1,6 @@
 CONFIG_ARCH=amd64
 CONFIG_SUITE=buster
-CONFIG_MIRROR=http://localhost:3142/mirrors.163.com/debian
+CONFIG_MIRROR=http://127.0.0.1:3142/mirrors.163.com/debian
 CONFIG_EXT_PKGS=initramfs-tools,linux-image-amd64,ca-certificates
 CONFIG_HOSTNAME=localhost
 CONFIG_INSTALLER_KERNEL_VERSION=auto

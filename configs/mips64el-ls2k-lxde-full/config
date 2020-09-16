@@ -1,0 +1,3 @@
+source configs/mips64el-ls2k_edu-lxde/config
+
+CONFIG_EXT_PKGS="$CONFIG_EXT_PKGS,evince,scratch,thonny,geany,idle3,vlc,pulseaudio,gedit,catfish,mousepad,ristretto,inkscape,claws-mail,python3-opencv,python3-pandas,python3-numpy,python3-pil"

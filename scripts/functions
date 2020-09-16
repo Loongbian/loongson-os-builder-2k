@@ -3,6 +3,7 @@ if ! ischroot -t; then
   exit 1
 fi
 
+cd "$(dirname $0)"
 
 update_hostname() {
   # update hostname to avoid conflict with the build machine
@@ -30,8 +31,78 @@ remove_machine_id() {
   rm -f /etc/machine-id
 }
 
+
+add_fallback_source() {
+  local APT_FALLBACK_SOURCE="$1"
+  if ! fgrep "$APT_FALLBACK_SOURCE" /etc/apt/sources.list; then
+    echo "deb $APT_FALLBACK_SOURCE buster main" >> /etc/apt/sources.list
+    apt update
+  fi
+}
+
+set_timezone() {
+  local AREA=${1:-Asia}
+  local ZONE=${2:-Shanghai}
+  debconf-set-selections <<-EOF
+tzdata tzdata/Areas select $AREA
+tzdata tzdata/Zones/$AREA select $ZONE
+EOF
+  rm -f /etc/timezone
+  rm -f /etc/localtime
+  dpkg-reconfigure -f noninteractive tzdata
+}
+
+set_locale() {
+  local LOCALES="zh_CN.UTF-8 UTF-8, en_US.UTF-8 UTF-8"
+  local SELECTED_LOCALE="zh_CN.UTF-8"
+  if ! which locale-gen > /dev/null; then
+    echo "Note: locale-gen is not avaiable, skipping locale generation."
+    return
+  fi
+  debconf-set-selections -v <<-EOF
+locales locales/locales_to_be_generated multiselect $LOCALES
+locales locales/default_environment_locale select $SELECTED_LOCALE
+EOF
+  rm -f /etc/locale.gen
+  dpkg-reconfigure -f noninteractive locales
+}
+
+update_pmon_config() {
+  local KEY="$1"
+  local VALUE="$2"
+  sed -i "s/^#*\s*\(${KEY}=\).*/\1\"${VALUE}\"/" /etc/default/pmon-update
+}
+
+enable_splash() {
+  update_pmon_config PMON_PARAMETERS "ro quiet splash"
+}
+
+replace_apt_cacher_source() {
+  sed -i 's/http:\/\/127.0.0.1:3142\//https:\/\//g' /etc/apt/sources.list
+}
+
 basic_setup() {
   update_hostname
   setup_dhcp_network
   remove_machine_id
+  set_timezone
+  set_locale
+  replace_apt_cacher_source
+}
+
+run_loongbian_workarounds() {
+  # PMON boot.cfg should be configured at installation time
+  rm -f "/boot/boot.cfg"
+  # disable DNSSEC for systemd-resolved to prevent name resolution failure due to the incorrect hardware clock
+  mkdir -p "/etc/systemd/resolved.conf.d"
+  echo -e "[Resolve]\nDNSSEC=false\n" > "/etc/systemd/resolved.conf.d/disable-dnssec.conf"
+
+  # Force initrd.img regeneration
+  if [ ! -f /boot/initrd.img-4.19.0-loongson-2k ]; then
+    dpkg-reconfigure linux-image-4.19.0-loongson-2k
+  fi
+
+  if [ ! -f /boot/initrd.img-5.7.0-loongson-2k ]; then
+    dpkg-reconfigure linux-image-5.7.0-loongson-2k
+  fi
 }

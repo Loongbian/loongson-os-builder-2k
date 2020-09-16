@@ -1,7 +1,0 @@
-CONFIG_ARCH=mips64el
-CONFIG_SUITE=experimental
-CONFIG_MIRROR=https://mirrors.teach.com.cn/debian
-CONFIG_KEYRING=configs/mips64el-ls2k_edu-lxde/loongbian-archive-keyring.gpg
-CONFIG_EXT_PKGS=initramfs-tools,pmon-update,ca-certificates,linux-image-4.19.0-loongson-2k,linux-image-5.7.0-loongson-2k,xserver-xorg,lxde,lightdm,desktop-base,plymouth
-CONFIG_HOSTNAME=ls2k
-CONFIG_INSTALLER_KERNEL_VERSION=5.7.0-loongson-2k

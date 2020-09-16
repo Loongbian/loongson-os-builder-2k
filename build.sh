@@ -37,7 +37,10 @@ run_debootstrap() {
 }
 
 run_post_debootstrap_setup_cleanup() {
+  umount -q "$ROOTFS_DIR/proc" || true
+  umount -q "$ROOTFS_DIR/sys" || true
   umount -q "$ROOTFS_DIR/tmp/setup" || true
+  umount -q "$ROOTFS_DIR/dev/pts" || true
 }
 
 run_post_debootstrap_setup() {
@@ -47,17 +50,19 @@ run_post_debootstrap_setup() {
     return
   fi
 
-  trap run_post_debootstrap_setup_cleanup EXIT
-
+  trap run_post_debootstrap_setup_cleanup EXIT INT
+  mount -t proc proc "$ROOTFS_DIR/proc"
+  mount -t sysfs sys "$ROOTFS_DIR/sys"
+  mount --bind /dev/pts "$ROOTFS_DIR/dev/pts"
   require_bootstrapped
   resolv_workaround
   mkdir -p "$ROOTFS_DIR/tmp/setup"
   mount --bind "$POSTDEBOOTSTRAP_SETUP_DIR" "$ROOTFS_DIR/tmp/setup"
   cp "$HOOK_FUNCTIONS" "$ROOTFS_DIR/tmp/functions"
   export CONFIG_HOSTNAME
-  HOOK_FUNCTIONS="/tmp/functions" chroot "$ROOTFS_DIR" "/tmp/setup/setup.sh"
+  env -u DBUS_SESSION_BUS_ADDRESS HOOK_FUNCTIONS="/tmp/functions" chroot "$ROOTFS_DIR" "/tmp/setup/setup.sh"
   run_post_debootstrap_setup_cleanup
-  trap - EXIT
+  trap - EXIT INT
 }
 
 build_installer_initrd_cleanup() {
@@ -69,7 +74,7 @@ build_installer_initrd_cleanup() {
 }
 
 build_installer_initrd() {
-  trap build_installer_initrd_cleanup EXIT
+  trap build_installer_initrd_cleanup EXIT INT
   require_bootstrapped
   resolv_workaround
   mkdir -p "$OVERLAY_UPPER_DIR" "$OVERLAY_WORK_DIR"
@@ -77,7 +82,7 @@ build_installer_initrd() {
   mount -t proc proc "$ROOTFS_DIR/proc"
   mount -t sysfs sys "$ROOTFS_DIR/sys"
   chroot "$ROOTFS_DIR" apt update
-  chroot "$ROOTFS_DIR" apt install -y --no-install-recommends libc6-dev gcc whiptail parted squashfs-tools dosfstools busybox
+  chroot "$ROOTFS_DIR" apt install -y --no-install-recommends whiptail parted squashfs-tools dosfstools busybox
   mkdir -p "$ROOTFS_DIR/tmp/$INSTALLER_DIR"
   mount --bind "$INSTALLER_DIR" "$ROOTFS_DIR/tmp/$INSTALLER_DIR"
 
@@ -90,17 +95,13 @@ build_installer_initrd() {
   chroot "$ROOTFS_DIR" "/tmp/$INSTALLER_DIR/build.sh" "$INSTALLER_KERNEL_VERSION"
   ln -sf "../$INSTALLER_DIR/installer.img" "$BUILD_DIR/"
   build_installer_initrd_cleanup
-  trap - EXIT
+  trap - EXIT INT
 }
 
 pack_rootfs() {
   require_bootstrapped
-  EXCLUDE_LIST="/var/log /var/tmp /var/cache /var/run /var/mail /run /var/run /tmp /root /home /dev /sys /proc /mnt /media"
-  EXCLUDE_ARGS=
-  for dir in $EXCLUDE_LIST; do
-    EXCLUDE_ARGS="-e $ROOTFS_DIR/$dir $EXCLUDE_ARGS"
-  done
-  mksquashfs "$ROOTFS_DIR" "$BUILD_DIR/filesystem.sqfs" -comp xz -noappend $EXCLUDE_ARGS
+  EXCLUDE_LIST="var/log/* var/tmp/* var/cache/* var/run/* var/mail/* run/* var/run/* tmp/* root/* root/.* home/* dev/* sys/* proc/* mnt/* media/* debootstrap"
+  mksquashfs "$ROOTFS_DIR" "$BUILD_DIR/filesystem.sqfs" -comp xz -noappend -wildcards ${EXCLUDE_LIST:+-e $EXCLUDE_LIST}
   (cd "$BUILD_DIR" && md5sum "filesystem.sqfs" > "filesystem.md5sum")
 }
 
@@ -118,7 +119,7 @@ check_target_media_symlinks() {
 create_bootable_zip() {
   local TARGET_MEDIA_DIR="$CONFIG_DIR/$CONFIG_NAME/target-media"
   check_target_media_symlinks "$TARGET_MEDIA_DIR"
-  FILENAME="debian_${CONFIG_SUITE}_${CONFIG_ARCH}_${CONFIG_HOSTNAME}_$(date '+%Y%m%d').zip"
+  FILENAME="loongbian_${CONFIG_SUITE}_${CONFIG_HOSTNAME}_$(date '+%Y%m%d').zip"
   zip -0 -r "$FILENAME" "$TARGET_MEDIA_DIR"
   echo "$FILENAME is ready."
 }
@@ -126,8 +127,8 @@ create_bootable_zip() {
 create_bootable_iso() {
   local TARGET_MEDIA_DIR="$CONFIG_DIR/$CONFIG_NAME/target-media"
   check_target_media_symlinks "$TARGET_MEDIA_DIR" 
-  FILENAME="debian_${CONFIG_SUITE}_${CONFIG_ARCH}_${CONFIG_HOSTNAME}_$(date '+%Y%m%d').iso"
-  genisoimage -V "Debian Installer" -f -l -o "$FILENAME" "$TARGET_MEDIA_DIR"
+  FILENAME="loongbian_${CONFIG_SUITE}_${CONFIG_HOSTNAME}_$(date '+%Y%m%d').iso"
+  genisoimage -V "Loongbian Installer" -f -l -o "$FILENAME" "$TARGET_MEDIA_DIR"
   echo "$FILENAME is ready."
 }
 
