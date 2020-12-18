@@ -1,0 +1,3 @@
+source configs/mips64el-ls2k-base/config
+
+CONFIG_EXT_PKGS="$CONFIG_EXT_PKGS,krb5-locales,dbus,mime-support,bc,wget,elvis-tiny,libpam-systemd,reportbug,wamerican,ftp,locales,libc-l10n,liblockfile-bin,perl-modules-5.28,screen,pciutils,debian-faq,dc,bash-completion,apt-listchanges,doc-debian,perl,manpages,whois,bind9-host,ucf,lsof,at,procmail,dnsutils,openssh-client,telnet,bzip2,ncurses-term,file,gettext-base,python3-reportbug,mlocate,time,xz-utils"

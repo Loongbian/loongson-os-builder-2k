@@ -7,7 +7,7 @@ cd "$(dirname $0)"
 
 update_hostname() {
   # update hostname to avoid conflict with the build machine
-  if [ ! "$CONFIG_HOSTNAME" = "" ]; then
+  if [ -n "$CONFIG_HOSTNAME" ]; then
     echo "$CONFIG_HOSTNAME" > /etc/hostname
   fi
 }
@@ -34,7 +34,7 @@ remove_machine_id() {
 
 add_fallback_source() {
   local APT_FALLBACK_SOURCE="$1"
-  if ! fgrep "$APT_FALLBACK_SOURCE" /etc/apt/sources.list; then
+  if ! fgrep "${APT_FALLBACK_SOURCE#http://127.0.0.1:3142/}" /etc/apt/sources.list; then
     echo "deb $APT_FALLBACK_SOURCE buster main" >> /etc/apt/sources.list
     apt update
   fi
@@ -53,6 +53,10 @@ EOF
 }
 
 set_locale() {
+  if [ -n "$SKIP_LOCALE_CONF" ]; then
+    echo "Note: skipping locale configuration because SKIP_LOCALE_CONF is set."
+    return
+  fi
   local LOCALES="zh_CN.UTF-8 UTF-8, en_US.UTF-8 UTF-8"
   local SELECTED_LOCALE="zh_CN.UTF-8"
   if ! which locale-gen > /dev/null; then
@@ -87,13 +91,13 @@ basic_setup() {
   remove_machine_id
   set_timezone
   set_locale
-  replace_apt_cacher_source
 }
 
 run_loongbian_workarounds() {
-  # PMON boot.cfg should be configured at installation time
+  # Remove PMON boot.cfg as it should be configured at installation time
   rm -f "/boot/boot.cfg"
-  # disable DNSSEC for systemd-resolved to prevent name resolution failure due to the incorrect hardware clock
+
+  # Disable DNSSEC for systemd-resolved to prevent name resolution failure due to the incorrect hardware clock
   mkdir -p "/etc/systemd/resolved.conf.d"
   echo -e "[Resolve]\nDNSSEC=false\n" > "/etc/systemd/resolved.conf.d/disable-dnssec.conf"
 
@@ -105,4 +109,11 @@ run_loongbian_workarounds() {
   if [ ! -f /boot/initrd.img-5.7.0-loongson-2k ]; then
     dpkg-reconfigure linux-image-5.7.0-loongson-2k
   fi
+
+  # Add the fallback Debian apt source
+  add_fallback_source "http://127.0.0.1:3142/mirrors.teach.com.cn/debian"
+}
+
+post_setup() {
+  replace_apt_cacher_source
 }

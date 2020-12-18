@@ -1,7 +1,7 @@
 CONFIG_ARCH=mips64el
 CONFIG_SUITE=buster
-CONFIG_MIRROR=http://127.0.0.1:3142/mirrors.teach.com.cn/loongbian-experimental
+CONFIG_MIRROR=http://127.0.0.1:3142/mirrors.teach.com.cn/loongbian
 CONFIG_KEYRING=configs/mips64el-ls2k-base/loongbian-archive-keyring.gpg
-CONFIG_EXT_PKGS=loongbian-keyring,initramfs-tools,pmon-update,ca-certificates,linux-image-4.19.0-loongson-2k,linux-image-5.7.0-loongson-2k,busybox
+CONFIG_EXT_PKGS=loongbian-keyring,initramfs-tools,pmon-update,ca-certificates,apt-transport-https,linux-image-4.19.0-loongson-2k,linux-image-5.7.0-loongson-2k,busybox
 CONFIG_HOSTNAME=ls2k
 CONFIG_INSTALLER_KERNEL_VERSION=5.7.0-loongson-2k

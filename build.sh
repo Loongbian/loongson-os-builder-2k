@@ -127,7 +127,7 @@ create_bootable_zip() {
 create_bootable_iso() {
   local TARGET_MEDIA_DIR="$CONFIG_DIR/$CONFIG_NAME/target-media"
   check_target_media_symlinks "$TARGET_MEDIA_DIR" 
-  FILENAME="loongbian_${CONFIG_SUITE}_${CONFIG_HOSTNAME}_$(date '+%Y%m%d').iso"
+  local FILENAME=${OUTPUT_FILENAME:-"loongbian_${CONFIG_SUITE}_${CONFIG_HOSTNAME}_$(date '+%Y%m%d').iso"}
   genisoimage -V "Loongbian Installer" -f -l -o "$FILENAME" "$TARGET_MEDIA_DIR"
   echo "$FILENAME is ready."
 }
@@ -168,7 +168,7 @@ clean_all() {
 
 usage() {
   echo -e \
-    "Usage: $0 -c config -m command\n\n" \
+    "Usage: $0 -c config -m command [-o output]\n\n" \
     "Available commands:\n" \
     "debootstrap -- debootstrap the base rootfs using qemu-debootstrap\n" \
     "post-debootstrap-setup -- install essential packages, desktop environment, external packages in setup/pkgs, and configure DHCP network for wired network interfaces\n" \
@@ -199,6 +199,10 @@ while [ "$#" -gt 0 ]; do
   -y|--no-clean-warning)
     NO_CLEAN_WARNING=y
     shift
+    ;;
+  -o)
+    OUTPUT_FILENAME="$2"
+    shift 2 || (usage; exit 1)
     ;;
   *)
     usage
