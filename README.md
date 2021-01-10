@@ -18,7 +18,6 @@ As root, run
 
 ```
 $ apt install binfmt-support qemu qemu-user-static debootstrap 
-$ apt install whiptail parted squashfs-tools dosfstools gcc     # used for building the initrd installer  
 ```
 
 ## Build
@@ -56,5 +55,5 @@ to run debootstrap only.
 ## Create a bootable installation media
 
 ```
-$ dd if=debian_buster_mips64el_ls2k_YYYYMMDD.iso of=/dev/sdX bs=1M status=progress
+$ dd if=loongbian_buster_mips64el_ls2k_YYYYMMDD.iso of=/dev/sdX bs=1M status=progress
 ```
