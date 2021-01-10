@@ -1,3 +1,1 @@
 source configs/mips64el-ls2k-headless/config
-
-CONFIG_EXT_PKGS="$CONFIG_EXT_PKGS,task-lxde-desktop,plymouth,fonts-wqy-zenhei,dbus-user-session,libpam-systemd,openbox-lxde-session,dconf-gsettings-backend,mousepad"
