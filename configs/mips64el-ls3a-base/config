@@ -1,0 +1,9 @@
+CONFIG_ARCH=mips64el
+CONFIG_SUITE=buster
+CONFIG_MIRROR=http://127.0.0.1:3142/mirrors.teach.com.cn/loongbian
+CONFIG_KEYRING=configs/mips64el-ls2k-base/loongbian-archive-keyring.gpg
+CONFIG_EXT_PKGS=loongbian-keyring,initramfs-tools,ca-certificates,apt-transport-https,linux-image-4.19.0-loongson-3,busybox,grub-efi-loongson64
+CONFIG_HOSTNAME=ls3a
+CONFIG_INSTALLER_KERNEL_VERSION=4.19.0-loongson-3
+CONFIG_BOOTLOADER=grub
+CONFIG_GRUB_TARGET=mips64el-efi

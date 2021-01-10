@@ -26,7 +26,7 @@ $ apt install binfmt-support qemu qemu-user-static debootstrap
 
 ```
 $ cd loongson-os-builder-2k
-$ ./build.sh -c mips64el-ls2k_edu-lxde
+$ ./build.sh -c mips64el-ls2k-lxde
 ```
 
 Now you get a ready-to-boot installation iso file. You may wish to distribute it.
@@ -36,18 +36,18 @@ Now you get a ready-to-boot installation iso file. You may wish to distribute it
 `build.sh` supports a number of different commands.
 
 * `debootstrap`: debootstrap the base rootfs using qemu-debootstrap.
-* `post-debootstrap-setup`: install essential packages, desktop environment, external packages in setup/pkgs, and configure DHCP network for wired network interfaces
-* `build-installer-initrd`: build the installer.img initrd image
-* `pack-rootfs`: pack the rootfs into a squashfs image and generate its md5sum required by installer.img
-* `create-bootable-iso`: create the bootable installation iso file
+* `setup`: run post-installation setup script: install essential packages, desktop environment, external packages in setup/pkgs, and configure DHCP network for wired network interfaces
+* `installer`: build the installer.img initrd image
+* `sqfs`: pack the rootfs into a squashfs image and generate its md5sum required by installer.img
+* `iso`: create the bootable installation iso file
 * `all`: everything above
-* `create-bootable-zip`:  create the bootable installation zip file (legacy)
-* `clean-all`: clean all built files
+* `zip`:  create the bootable installation zip file (legacy)
+* `clean`: clean all built files
 
 For example, use
 
 ```
-$ ./build.sh -c mips64el-ls2k_edu-lxde -m debootstrap
+$ ./build.sh -c mips64el-ls2k-lxde -m debootstrap
 ```
 
 to run debootstrap only.

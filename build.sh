@@ -82,7 +82,7 @@ build_installer_initrd() {
   mount -t proc proc "$ROOTFS_DIR/proc"
   mount -t sysfs sys "$ROOTFS_DIR/sys"
   chroot "$ROOTFS_DIR" apt update
-  chroot "$ROOTFS_DIR" apt install -y --no-install-recommends whiptail parted squashfs-tools dosfstools busybox
+  chroot "$ROOTFS_DIR" apt install -y --no-install-recommends whiptail parted squashfs-tools dosfstools busybox #dmidecode
   mkdir -p "$ROOTFS_DIR/tmp/$INSTALLER_DIR"
   mount --bind "$INSTALLER_DIR" "$ROOTFS_DIR/tmp/$INSTALLER_DIR"
 
@@ -91,8 +91,9 @@ build_installer_initrd() {
   else
     local INSTALLER_KERNEL_VERSION="$(ls $ROOTFS_DIR/lib/modules | sort -V | tail -1)"
   fi
-
-  chroot "$ROOTFS_DIR" "/tmp/$INSTALLER_DIR/build.sh" "$INSTALLER_KERNEL_VERSION"
+  env INSTALLER_BOOTLOADER="$CONFIG_BOOTLOADER" \
+      INSTALLER_GRUB_TARGET="$CONFIG_GRUB_TARGET" \
+      chroot "$ROOTFS_DIR" "/tmp/$INSTALLER_DIR/build.sh" "$INSTALLER_KERNEL_VERSION"
   ln -sf "../$INSTALLER_DIR/installer.img" "$BUILD_DIR/"
   build_installer_initrd_cleanup
   trap - EXIT INT
@@ -126,9 +127,20 @@ create_bootable_zip() {
 
 create_bootable_iso() {
   local TARGET_MEDIA_DIR="$CONFIG_DIR/$CONFIG_NAME/target-media"
-  check_target_media_symlinks "$TARGET_MEDIA_DIR" 
+  check_target_media_symlinks "$TARGET_MEDIA_DIR"
   local FILENAME=${OUTPUT_FILENAME:-"loongbian_${CONFIG_SUITE}_${CONFIG_HOSTNAME}_$(date '+%Y%m%d').iso"}
-  genisoimage -V "Loongbian Installer" -f -l -o "$FILENAME" "$TARGET_MEDIA_DIR"
+  case "$CONFIG_BOOTLOADER" in
+  grub)
+    grub-mkrescue -f -o "$FILENAME" "$TARGET_MEDIA_DIR"
+    ;;
+  pmon)
+    genisoimage -V "Loongbian Installer" -f -l -o "$FILENAME" "$TARGET_MEDIA_DIR"
+    ;;
+  *)
+    echo "Error: Unsupport bootloader type $CONFIG_BOOTLOADER"
+    return 1
+    ;;
+  esac
   echo "$FILENAME is ready."
 }
 
@@ -170,14 +182,14 @@ usage() {
   echo -e \
     "Usage: $0 -c config -m command [-o output]\n\n" \
     "Available commands:\n" \
-    "debootstrap -- debootstrap the base rootfs using qemu-debootstrap\n" \
-    "post-debootstrap-setup -- install essential packages, desktop environment, external packages in setup/pkgs, and configure DHCP network for wired network interfaces\n" \
-    "build-installer-initrd -- build the installer initrd image\n" \
-    "pack-rootfs -- pack the rootfs into a squashfs image and generate its md5sum\n" \
-    "create-bootable-iso -- create the bootable installation iso file\n" \
-    "all -- everything above\n" \
-    "create-bootable-zip -- create the bootable installation zip file (legacy)\n" \
-    "clean-all -- clean all built files\n"
+    "  debootstrap	debootstrap the base rootfs using qemu-debootstrap\n" \
+    "  setup	run the post-installation setup script\n" \
+    "  installer	build the installer initrd image\n" \
+    "  sqfs		pack the rootfs into a squashfs image and compute its md5sum\n" \
+    "  iso		create the bootable installation iso file\n" \
+    "  all		everything above\n" \
+    "  zip		create the bootable installation zip file (legacy)\n" \
+    "  clean	clean all built files\n"
 }
 
 
@@ -228,19 +240,19 @@ case "$MODE" in
 debootstrap)
   run_debootstrap
   ;;
-post-debootstrap-setup)
+setup)
   run_post_debootstrap_setup
   ;;
-build-installer-initrd)
+installer)
   build_installer_initrd
   ;;
-pack-rootfs)
+sqfs)
   pack_rootfs
   ;;
-create-bootable-zip)
+zip)
   create_bootable_zip
   ;;
-create-bootable-iso)
+iso)
   create_bootable_iso
   ;;
 all|"")
@@ -251,7 +263,7 @@ all|"")
   pack_rootfs
   create_bootable_iso
   ;;
-clean-all)
+clean)
   clean_all
   ;;
 *)
