@@ -17,7 +17,7 @@ Note the `--recursive` option.
 As root, run
 
 ```
-$ apt install binfmt-support qemu qemu-user-static debootstrap 
+$ apt install binfmt-support qemu qemu-user-static debootstrap xorriso genisoimage apt-cacher-ng squashfs-tools
 ```
 
 ## Build
