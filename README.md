@@ -2,7 +2,7 @@
 
 Build a ready-to-boot Loongson OS image in one command.
 
-Tested on a Debian Buster x86_64 build machine.
+For building Loongson targets, a Loongson build machine is needed.
 
 ## Get the builder
 
